@@ -12,11 +12,6 @@ layout: default
       <a href="https://usekura.xyz" class="bg-primary hover:bg-primary/80 text-black py-2 px-6 rounded-md font-medium transition">usekura.xyz</a>
     </div>
   </div>
-  <div v-click class="bg-gradient-to-r from-primary/5 to-primary/10 p-4 rounded-lg">
-    <p class="text-white italic">
-      "We thought we needed better handling of niche queries. Kura showed us that optimizing our ordering flow would have 4× the impact."
-    </p>
-  </div>
 </div>
 
 <!--
