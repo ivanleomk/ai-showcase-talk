@@ -1,0 +1,733 @@
+---
+layout: default
+theme: geist
+src: ./slides/slide_0.md
+---
+
+---
+src: ./slides/slide_1.md
+---
+
+---
+src: ./slides/slide_2.md
+---
+
+---
+src: ./slides/slide_3.md
+---
+
+---
+src: ./slides/slide_4.md
+---
+
+---
+src: ./slides/slide_5.md
+---
+
+---
+src: ./slides/slide_6.md
+---
+
+---
+src: ./slides/slide_7.md
+---
+
+---
+src: ./slides/slide_8.md
+---
+
+---
+src: ./slides/slide_9.md
+---
+
+---
+src: ./slides/slide_10.md
+---
+
+---
+src: ./slides/slide_11.md
+---
+
+---
+src: ./slides/slide_12.md
+---
+
+---
+src: ./slides/slide_13.md
+---
+
+---
+src: ./slides/slide_14.md
+---
+
+
+
+# Content from ./slides/slide_0.md
+
+---
+theme: default
+---
+
+<div class="max-w-4xl">
+  <h1 class="text-2xl font-bold text-white mb-12">Kura</h1>
+
+  <div class="text-7xl font-bold text-white mt-4 mb-8 leading-tight">
+    Making sense of customer data at scale
+  </div>
+
+  <div class="text-lg text-white opacity-90">
+    Converting unstructured data to valuable insights
+  </div>
+</div>
+
+
+# Content from ./slides/slide_1.md
+
+---
+layout: default
+---
+
+# What is Kura?
+
+<div class="grid grid-cols-1 gap-4 mt-6">
+  <v-clicks>
+    <div class="bg-gradient-to-r from-primary/5 to-primary/10 p-4 rounded-lg shadow-sm">
+      <p class="text-white m-0"><span class="text-primary font-bold mr-2">1.</span> Open-source tool for making sense of user data using LLMs</p>
+    </div>
+    <div class="bg-gradient-to-r from-primary/5 to-primary/10 p-4 rounded-lg shadow-sm">
+      <p class="text-white m-0"><span class="text-primary font-bold mr-2">2.</span> Built with the same ideas that Anthropic uses to guide product decisions</p>
+    </div>
+    <div class="bg-gradient-to-r from-primary/5 to-primary/10 p-4 rounded-lg shadow-sm">
+      <p class="text-white m-0"><span class="text-primary font-bold mr-2">3.</span>Identify patterns of user behavious</p>
+    </div>
+  </v-clicks>
+</div>
+
+<!--
+Let's start by understanding what Kura is.
+
+[click] Kura is an open-source tool designed to help you make sense of user data, particularly conversation data, using language models like Gemini.
+
+[click] It's built with the same underlying principles as Anthropic's CLIO system, but made available as an open-source project so you can use it with your own data.
+
+[click] The core functionality involves iteratively summarizing and clustering conversations to reveal broad usage patterns, helping you identify which features to prioritize or which issues to fix.
+-->
+
+
+# Content from ./slides/slide_10.md
+
+---
+layout: default
+---
+
+# Using our new model
+
+```py {3-5}
+from kura import Kura
+
+kura = Kura(
+    summarisation_model=UsagePatternModel()
+)
+```
+
+<!--
+When analyzing RAG system performance, distinguishing between inventory and capability issues is crucial:
+
+- Knowledge Inventory failures occur when the right information simply isn't in your system
+- Retrieval Capability failures happen when information exists but can't be effectively retrieved
+- Generation Capability issues arise when retrieved content is misinterpreted or poorly synthesized
+- Understanding this distinction helps target improvements to the right component
+-->
+
+
+# Content from ./slides/slide_11.md
+
+---
+layout: default
+---
+
+# Understanding RAG Systems - Inventory vs Capability
+
+<div class="grid grid-cols-1 gap-y-0">
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Knowledge Inventory</h3>
+    <p class="mt-2 text-white opacity-90">Document coverage, freshness, and granularity of information in your vector store</p>
+  </div>
+
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Retrieval Capability</h3>
+    <p class="mt-2 text-white opacity-90">Effectiveness of embedding models, chunking strategies, and query reformulation</p>
+  </div>
+
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Generation Capability</h3>
+    <p class="mt-2 text-white opacity-90">LLM's ability to synthesize retrieved content into accurate, coherent responses</p>
+  </div>
+</div>
+
+<!--
+When analyzing RAG system performance, distinguishing between inventory and capability issues is crucial:
+
+- Knowledge Inventory failures occur when the right information simply isn't in your system
+- Retrieval Capability failures happen when information exists but can't be effectively retrieved
+- Generation Capability issues arise when retrieved content is misinterpreted or poorly synthesized
+- Understanding this distinction helps target improvements to the right component
+-->
+
+
+# Content from ./slides/slide_12.md
+
+---
+theme: default
+---
+
+# Language Detection for Conversations
+
+````md magic-move
+```python {4-9} {maxHeight:"300px"}
+import asyncio
+import instructor
+from pydantic import BaseModel, Field
+
+class Language(BaseModel):
+    language_code: str = Field(
+        description="The language code of the conversation. (Eg. en, fr, es)",
+        pattern=r"^[a-z]{2}$",
+    )
+```
+
+```python {3-4,7-8} {maxHeight:"300px"}
+async def language_extractor(
+    conversation: Conversation,
+    sems: dict[str, asyncio.Semaphore],
+    clients: dict[str, instructor.AsyncInstructor],
+) -> ExtractedProperty:
+    # Get the default semaphore and client limits
+    sem = sems.get("default")
+    client = clients.get("default")
+```
+
+```py {1,18-21} {maxHeight:"300px"}
+    async with sem:
+        resp = await client.chat.completions.create(
+            model="gemini-2.0-flash",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that extracts the language of the following conversation.",
+                },
+                {
+                    "role": "user",
+                    "content": "\n".join(
+                        [f"{msg.role}: {msg.content}" for msg in conversation.messages]
+                    ),
+                },
+            ],
+            response_model=Language,
+        )
+        return ExtractedProperty(
+            name="language_code",
+            value=resp.language_code,
+        )
+```
+````
+
+<!--
+This slide shows how a simple language detector can be implemented for conversation analysis:
+
+- We define a Pydantic model to validate the language code format
+- We create an async function that takes conversation data, semaphores, and API clients
+- The function uses a semaphore to manage API request concurrency
+- It formats conversation messages into a simple string format
+- The function calls an LLM to detect the language of the conversation
+- It returns a structured ExtractedProperty with the detected language code
+
+This approach allows for efficient language tagging with minimal code complexity.
+-->
+
+
+# Content from ./slides/slide_13.md
+
+---
+theme: default
+---
+
+# Entire Code Example
+
+```py {*}{maxHeight:'350px'}
+import asyncio
+import instructor
+from pydantic import BaseModel, Field
+from kura import Kura
+from kura.types import Conversation, ExtractedProperty
+from kura.summarisation import SummaryModel
+
+
+class Language(BaseModel):
+    language_code: str = Field(
+        description="The language code of the conversation. (Eg. en, fr, es)",
+        pattern=r"^[a-z]{2}$",
+    )
+
+
+async def language_extractor(
+    conversation: Conversation,
+    sems: dict[str, asyncio.Semaphore],
+    clients: dict[str, instructor.AsyncInstructor],
+) -> ExtractedProperty:
+    # Get the default semaphore and client limits
+    sem = sems.get("default")
+    client = clients.get("default")
+
+    async with sem:
+        resp = await client.chat.completions.create(
+            model="gemini-2.0-flash",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that extracts the language of the following conversation.",
+                },
+                {
+                    "role": "user",
+                    "content": "\n".join(
+                        [f"{msg.role}: {msg.content}" for msg in conversation.messages]
+                    ),
+                },
+            ],
+            response_model=Language,
+        )
+        return ExtractedProperty(
+            name="language_code",
+            value=resp.language_code,
+        )
+
+
+summary_model = SummaryModel(extractors=[language_extractor])
+kura = Kura(
+    summarisation_model=summary_model,
+    override_checkpoint_dir=True
+)
+conversations = Conversation.from_claude_conversation_dump("conversations.json")[:100]
+asyncio.run(kura.cluster_conversations(conversations))
+kura.visualise_clusters()
+```
+
+<!--
+Being able to extract these conversations and label them with these models is a huge game changer.
+
+For instance, we recently worked with a customer deploying chatbots to take orders at scale.
+
+They thought our client's chatbot needed improvement handling niche queries like "Do you have parking?" However, analyzing their conversation data revealed a surprising truth: 75% of customer interactions were simple food orders, with 93% of those mentioning just one dish. The real opportunity emerged when we noticed that a simple "Is that all?" prompt resulted in a 66% upsell success rate. Customers were already primed to purchase more. The solution wasn't investing in complex query handling, but optimizing the prompt flow: suggest drinks with main courses, recommend combos with single-item orders.
+
+Imagine just changing 3 lines of code, and increasing revenue by almost 20%.
+-->
+
+
+# Content from ./slides/slide_14.md
+
+---
+layout: default
+---
+
+# Thank You
+
+[Kura on GitHub](https://github.com/yourname/kura)
+
+<!--
+Thank you for your attention. You can find Kura on GitHub to get started with your own topic modeling.
+
+Feel free to reach out with any questions about implementation or how to apply these insights to your specific use case.
+-->
+
+
+# Content from ./slides/slide_2.md
+
+---
+layout: default
+---
+
+# Getting Started with Kura
+
+````md magic-move
+```python {6}
+from kura import Kura
+from kura.types import Conversation
+import asyncio
+
+# Initialise the Kura object
+kura = Kura()
+```
+
+```python {9-11}
+from kura import Kura
+from kura.types import Conversation
+import asyncio
+
+# Initialise the Kura object
+kura = Kura()
+
+# Load in a Conversation from Hugging Face
+conversations = Conversation.from_hf_dataset(
+    "ivanleomk/synthetic-gemini-conversations", split="train"
+)
+```
+
+```python {14,15}
+from kura import Kura
+from kura.types import Conversation
+import asyncio
+
+# Initialise the Kura object
+kura = Kura()
+
+# Load in a Conversation from Hugging Face
+conversations = Conversation.from_hf_dataset(
+    "ivanleomk/synthetic-gemini-conversations", split="train"
+)
+
+# Kick off the clustering step
+asyncio.run(kura.cluster_conversations(conversations))
+kura.visualise_clusters()
+```
+````
+
+
+# Content from ./slides/slide_3.md
+
+---
+layout: default
+---
+
+# The Core Approach
+
+![](./d2.svg)
+
+<!--
+Traditional approaches to conversation analysis often rely on manual review, which limits how many conversations you can analyze and introduces human bias.
+
+In contrast, Kura uses language models to summarize conversations and identify patterns at scale. This approach allows for:
+
+* Processing thousands of conversations in minutes
+* Finding patterns a human might miss
+* Adapting to new topics as they emerge
+-->
+
+
+# Content from ./slides/slide_5.md
+
+---
+layout: default
+---
+
+# Loading Different Datasets in Kura
+
+````md magic-move
+```python {9-11}
+from kura import Kura
+from kura.types import Conversation
+import asyncio
+
+# Initialise the Kura object
+kura = Kura()
+
+# Load in a Conversation from Hugging Face
+conversations = Conversation.from_hf_dataset(
+    "ivanleomk/synthetic-gemini-conversations", split="train"
+)
+
+# Kick off the clustering step
+asyncio.run(kura.cluster_conversations(conversations))
+kura.visualise_clusters()
+```
+
+```python {9-19}
+from kura import Kura
+from kura.types import Conversation
+import asyncio
+
+# Initialize Kura
+kura = Kura()
+
+# Use it with a dataset that might not have the same created_at, chat_id and messages fields
+conversations = Conversation.from_hf_dataset(
+    "allenai/WildChat-nontoxic",
+    split="train",
+    max_conversations=2000,
+    chat_id_fn=lambda x: x["conversation_id"],
+    created_at_fn=lambda x: x["timestamp"],
+    messages_fn=lambda row: [
+        {"role": m["role"], "content": m["content"], "created_at": row["timestamp"]}
+        for m in row["conversation"]
+    ],
+)
+
+
+# Run clustering and visualization
+asyncio.run(kura.cluster_conversations(conversations))
+kura.visualise_clusters()
+```
+
+```python {7}
+from kura import Kura
+from kura.types import Conversation
+import asyncio
+
+kura = Kura()
+
+conversations = Conversation.from_claude_conversation_dump("conversations.json")
+
+asyncio.run(kura.cluster_conversations(conversations))
+
+kura.visualise_clusters()
+```
+````
+
+
+# Content from ./slides/slide_6.md
+
+---
+theme: default
+---
+
+# Beyond Topic Modeling
+
+<div class="grid grid-cols-1 gap-y-4 ">
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Feature Prioritization</h3>
+    <p class="mt-2 text-white opacity-90">Map user feedback with query volumes to drive development decisions</p>
+  </div>
+
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Gap Analysis</h3>
+    <p class="mt-2 text-white opacity-90">Identify missing inventory and capability needs</p>
+  </div>
+
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Targeted Improvement</h3>
+    <p class="mt-2 text-white opacity-90">Generate synthetic data for specialized classifier training</p>
+  </div>
+</div>
+
+<!--
+The insights from topic modeling extend beyond just categorization:
+
+- Feature Prioritization helps you identify which features to build next based on actual demand
+- Gap Analysis reveals missing offerings like restaurant types or needed capabilities
+- Targeted Improvement lets you build specialized models through synthetic data generation
+-->
+
+
+# Content from ./slides/slide_7.md
+
+---
+theme: default
+---
+
+# Feature Prioritization At Anthropic
+
+<div class="grid grid-cols-1 gap-y-4 ">
+  <div v-click>
+   <h3 class="text-2xl font-bold text-blue-400">Data Collection</h3>
+    <p class="mt-2 text-white opacity-90">Analyzed 1 million anonymized conversations from .edu email addresses</p>
+  </div>
+
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Topic Clustering</h3>
+    <p class="mt-2 text-white opacity-90">Used Claude Insights and Observations (Clio) to identify usage patterns</p>
+  </div>
+
+  <div v-click>
+    <h3 class="text-2xl font-bold text-blue-400">Key Discovery</h3>
+    <p class="mt-2 text-white opacity-90">Students used Claude as a learning guide rather than just an answer machine</p>
+  </div>
+</div>
+
+<!--
+The insights from topic modeling extend beyond just categorization:
+
+- Feature Prioritization helps you identify which features to build next based on actual demand
+- Gap Analysis reveals missing offerings like restaurant types or needed capabilities
+- Targeted Improvement lets you build specialized models through synthetic data generation
+-->
+
+
+# Content from ./slides/slide_8.md
+
+---
+theme: default
+---
+
+# Summarizing User Conversations
+
+````md magic-move
+```python {4-12} {maxHeight:"400px"}
+from pydantic import BaseModel
+
+# Define our Response Model
+class UsagePattern(BaseModel):
+    category: Literal["Learning", "QuestionAnswering", "Brainstorming", "TaskCompletion"] = Field(
+        description="The primary usage pattern of this conversation"
+    )
+    summary: str = Field(
+        description="A brief summary of what the user is trying to accomplish"
+    )
+```
+
+```python {2,3,4,14-17} {maxHeight:"400px"}
+from pydantic import BaseModel
+from kura import Kura
+from kura.summarisation import SummaryModel, ConversationSummary, GeneratedSummary
+from kura.types import Conversation, Message
+
+# Define our Response Model
+class UsagePattern(BaseModel):
+    category: Literal["Learning", "QuestionAnswering", "Brainstorming", "TaskCompletion"] = Field(
+        description="The primary usage pattern of this conversation"
+    )
+    summary: str = Field(
+        description="A brief summary of what the user is trying to accomplish"
+    )
+
+class UsagePatternModel(SummaryModel):
+    def __init__(self):
+        super().__init__()
+```
+
+```python {10-20} {maxHeight:"400px"}
+from pydantic import BaseModel
+from kura import Kura
+from kura.summarisation import SummaryModel, ConversationSummary, GeneratedSummary
+from kura.types import Conversation, Message
+
+class UsagePatternModel(SummaryModel):
+    def __init__(self):
+        super().__init__()
+
+    async def summarise_conversation(
+        self, conversation: Conversation
+    ) -> ConversationSummary:
+        client = self.clients.get("default")
+        sem = self.sems.get("default")
+        assert client is not None and isinstance(client, instructor.AsyncInstructor)
+```
+
+```py {3-22} {maxHeight:"400px"}
+        sem = self.sems.get("default")
+        assert client is not None and isinstance(client, instructor.AsyncInstructor)
+        async with sem:  # type: ignore
+            resp = await client.chat.completions.create(  # type: ignore
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+You are a helpful assistant that summarises interactions between a custom service chatbot and a customer.
+                Here is the conversation that you should summarise
+    <messages>
+    {% for message in messages %}
+        <message>{{message.role}}: {{message.content}} </message>
+    {% endfor %}
+    </messages>
+    """,
+                    },
+                ],
+                context={"messages": conversation.messages},
+                response_model=GeneratedSummary,
+            )
+```
+
+```py {*}
+        metadata = await self.apply_hooks(conversation)
+        return ConversationSummary(
+            chat_id=conversation.chat_id,
+            summary=resp.summary,
+            metadata={
+                "conversation_turns": len(conversation.messages),
+                **conversation.metadata,
+                **metadata,
+            },
+        )
+```
+````
+
+<!--
+This slide shows how Anthropic transformed topic modeling insights into product features:
+
+- Topic modeling revealed that students were engaging in four distinct interaction styles, indicating different needs
+- Instead of just focusing on improving answer accuracy, they discovered a need for a different interaction model
+- This led to prioritizing a Learning Mode that emphasizes the Socratic method - asking questions back to students
+- The product was designed to clarify concepts, generate thoughtful questions, and guide students toward understanding
+- Topic modeling helped them prioritize this feature that might not have been obvious through traditional product development
+- By quantifying conversation patterns, they could justify the development effort for this specialized education mode
+-->
+
+
+# Content from ./slides/slide_9.md
+
+---
+theme: default
+---
+
+# Entire Code Example
+
+```py {*}{maxHeight:'350px'}
+from pydantic import BaseModel
+from kura import Kura
+from kura.summarisation import SummaryModel, ConversationSummary, GeneratedSummary
+from kura.types import Conversation, Message
+from typing import Literal
+from pydantic import Field
+import instructor
+
+# Define our Response Model
+class UsagePattern(BaseModel):
+    category: Literal["Learning", "QuestionAnswering", "Brainstorming", "TaskCompletion"] = Field(
+        description="The primary usage pattern of this conversation"
+    )
+    summary: str = Field(
+        description="A brief summary of what the user is trying to accomplish"
+    )
+
+class UsagePatternModel(SummaryModel):
+    def __init__(self):
+        super().__init__()
+
+    async def summarise_conversation(
+        self, conversation: Conversation
+    ) -> ConversationSummary:
+        client = self.clients.get("default")
+        sem = self.sems.get("default")
+        assert client is not None and isinstance(client, instructor.AsyncInstructor)
+
+        async with sem:  # type: ignore
+            resp = await client.chat.completions.create(  # type: ignore
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+You are a helpful assistant that summarises interactions between a custom service chatbot and a customer.
+                Here is the conversation that you should summarise
+    <messages>
+    {% for message in messages %}
+        <message>{{message.role}}: {{message.content}} </message>
+    {% endfor %}
+    </messages>
+    """,
+                    },
+                ],
+                context={"messages": conversation.messages},
+                response_model=GeneratedSummary,
+            )
+
+        metadata = await self.apply_hooks(conversation)
+        return ConversationSummary(
+            chat_id=conversation.chat_id,
+            summary=resp.summary,
+            metadata={
+                "conversation_turns": len(conversation.messages),
+                **conversation.metadata,
+                **metadata,
+            },
+        )
+```

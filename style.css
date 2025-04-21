@@ -1,0 +1,41 @@
+.slidev-code-highlighted {
+    background-color: rgba(45, 212, 191, 0.1);
+  }
+  
+  .shiki {
+    background-color: #1e293b !important;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+  }
+  
+  .shiki .line {
+    min-height: 1.5em;
+    line-height: 1.5em;
+  }
+  
+  .shiki .diff.remove {
+    background-color: rgba(244, 63, 94, 0.2);
+    opacity: 0.7;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+  
+  .shiki .diff.add {
+    background-color: rgba(34, 197, 94, 0.2);
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+  
+  /* General padding for slidev */
+  .slidev-layout {
+    padding: 2rem;
+  }
+  
+  .slidev-layout .slidev-page {
+    padding: 1rem;
+  }
+  
+  .slidev-layout .slidev-content {
+    padding: 0.5rem;
+  }

@@ -1,0 +1,18 @@
+{
+  "name": "slidev",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "slidev build",
+    "dev": "slidev --open",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@iconify-json/carbon": "^1.2.8",
+    "@iconify-json/twemoji": "^1.2.2",
+    "@slidev/cli": "^51.4.0",
+    "@slidev/theme-default": "latest",
+    "slidev-theme-geist": "^0.8.1",
+    "vue": "^3.5.13"
+  }
+}
